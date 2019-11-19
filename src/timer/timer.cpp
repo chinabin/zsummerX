@@ -71,14 +71,25 @@ TimerID Timer::makeTimeID(bool useSystemTick, unsigned int delayTick)
     }
     tick += delayTick;
     tick <<= SequenceBit;
-    tick |= (++_queSeq & SequenceMask);
-    tick &= TimeSeqMask;
+    tick |= (++_queSeq & SequenceMask);		// 后 15 位为标识位，确保 TimerID 不重复
+    tick &= TimeSeqMask;					// TimerID 有效位为 51 位
     if (useSystemTick)
     {
-        tick |= UsedSysMask;
+        tick |= UsedSysMask;				// TimerID 第 52 位标识是否使用 SystemTick
     }
+	/*
+	生成的 TimerID ，共 52 位有意义：
+		1. 第 52 位：是否使用 SystemTick 标识。
+		2. 第 51 - 16 位：当前嘀嗒 + delayTick。
+		3. 第 15 - 1 位：不断增长的 _queSeq 用来确保函数返回的 TimerID(否使用 SystemTick 标识 + 当前嘀嗒 + delayTick + 唯一标识) 不重复。
+	*/
     return tick;
 }
+/*
+返回值：
+	first: 是否使用 SystemTick
+	second: 当前嘀嗒 + delayTick
+*/
 std::pair<bool, unsigned long long> Timer::resolveTimeID(TimerID timerID)
 {
     return std::make_pair((timerID & UsedSysMask) != 0, (timerID & TimeSeqMask) >> SequenceBit);
@@ -87,6 +98,9 @@ using std::min;
 //get next expire time  be used to set timeout when calling select / epoll_wait / GetQueuedCompletionStatus.
 unsigned int Timer::getNextExpireTime()
 {
+	/*
+	sys 和 steady 都是某个定时器离触发还剩余的时间
+	*/
     unsigned long long steady = -1;
     unsigned long long sys = -1;
     if (!_sysQue.empty())
