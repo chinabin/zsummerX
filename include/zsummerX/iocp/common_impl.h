@@ -51,6 +51,7 @@ namespace zsummer
         class TcpAccept;
         class UdpSocket;
         const int InvalidFD = -1;
+		// 重叠结构体，与 IO 操作挂钩
         struct ExtendHandle 
         {
             OVERLAPPED     _overlapped;

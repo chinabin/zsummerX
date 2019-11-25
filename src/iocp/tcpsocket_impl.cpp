@@ -138,6 +138,9 @@ typedef  BOOL (PASCAL  *ConnectEx)(  SOCKET s,  const struct sockaddr* name,  in
              PVOID lpSendBuffer,  DWORD dwSendDataLength,  LPDWORD lpdwBytesSent,
              LPOVERLAPPED lpOverlapped);
 
+/*
+连接服务器
+*/
 bool TcpSocket::doConnect(const std::string& remoteIP, unsigned short remotePort, _OnConnectHandler && handler)
 {
     if (!_summer || _linkStatus != LS_WAITLINK)
@@ -282,7 +285,9 @@ bool TcpSocket::doConnect(const std::string& remoteIP, unsigned short remotePort
 
 
 
-
+/*
+请求发送数据
+*/
 bool TcpSocket::doSend(char * buf, unsigned int len, _OnSendHandler &&handler)
 {
     if (_linkStatus != LS_ESTABLISHED)
@@ -325,6 +330,9 @@ bool TcpSocket::doSend(char * buf, unsigned int len, _OnSendHandler &&handler)
 }
 
 
+/*
+请求接收数据
+*/
 bool TcpSocket::doRecv(char * buf, unsigned int len, _OnRecvHandler && handler)
 {
     if (_linkStatus != LS_ESTABLISHED)
@@ -369,6 +377,9 @@ bool TcpSocket::doRecv(char * buf, unsigned int len, _OnRecvHandler && handler)
     return true;
 }
 
+/*
+数据发送/接收成功、连接服务器成功的回调，并在对应的 case 回调之前设置好的回调函数
+*/
 void TcpSocket::onIOCPMessage(BOOL bSuccess, DWORD dwTranceBytes, unsigned char cType)
 {
     if (cType == ExtendHandle::HANDLE_CONNECT)

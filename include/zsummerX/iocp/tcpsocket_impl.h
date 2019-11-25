@@ -67,6 +67,9 @@ namespace zsummer
             //!handle:  int: is transfer length. if not all data already transfer that you need call doSend transfer the remnant data.
             //! warning: when  handler is not callback ,  the function can not call repeat. if you have some question maybe you need read the test or implementation .
             //!          so,  when you want  repeat send data without care the callback , you need encapsulate the send operate via a send queue like the StressTest/FrameTest source code
+			/*
+			请求发送数据
+			*/
             bool doSend(char * buf, unsigned int len, _OnSendHandler &&handler);
             //!handle:  void(NetErrorCode, int)
             //!handle:  NetErrorCode: 0 success. other code is failed  and can see error code in enum NetErrorCode 

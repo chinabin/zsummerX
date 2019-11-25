@@ -165,6 +165,7 @@ bool TcpSession::attatch(const TcpSocketPtr &sockptr, AccepterID aID, SessionID 
     return true;
 }
 
+// 连接成功的回调
 void TcpSession::onConnected(zsummer::network::NetErrorCode ec)
 {
     if (ec)
@@ -203,12 +204,14 @@ void TcpSession::onConnected(zsummer::network::NetErrorCode ec)
         }
     }
     SessionManager::getRef()._statInfo[STAT_SESSION_LINKED]++;
+	// 为什么？
     if (!_sendque.empty())
     {
         send(nullptr, 0);
     }
 }
 
+// 请求接收数据
 bool TcpSession::doRecv()
 {
     LCT("TcpSession::doRecv sessionID=" << getSessionID() );
@@ -223,6 +226,10 @@ bool TcpSession::doRecv()
 #endif
 }
 
+/*
+关闭连接。
+会尝试重连。
+*/
 void TcpSession::close()
 {
     if (_status != 3 && _status != 0)
@@ -258,6 +265,10 @@ void TcpSession::close()
     LCW("TcpSession::close closing. sID=" << _sessionID);
 }
 
+/*
+接收数据成功回调函数。
+检查已接收的数据并分发到上层。
+*/
 unsigned int TcpSession::onRecv(zsummer::network::NetErrorCode ec, int received)
 {
     LCT("TcpSession::onRecv sessionID=" << getSessionID() << ", received=" << received);
@@ -475,6 +486,10 @@ unsigned int TcpSession::onRecv(zsummer::network::NetErrorCode ec, int received)
 
 }
 
+/*
+发送数据接口。
+期间会检查玩家状态，玩家数据大小，当前队列长度。
+*/
 void TcpSession::send(const char *buf, unsigned int len)
 {
     LCT("TcpSession::send sessionID=" << getSessionID() << ", len=" << len);
@@ -546,7 +561,11 @@ void TcpSession::send(const char *buf, unsigned int len)
     }
 }
 
-
+/*
+数据发送成功的回调函数。
+如果上次数据还有剩余未发送，则继续发送。
+如果上次数据发送完成，则检查发送队列，尽可能组合成一个大数据块发送数据。
+*/
 void TcpSession::onSend(zsummer::network::NetErrorCode ec, int sent)
 {
 
@@ -576,6 +595,9 @@ void TcpSession::onSend(zsummer::network::NetErrorCode ec, int sent)
         _sending->len = 0;
         if (!_sendque.empty())
         {
+			/*
+			尽可能将发送队列中的数据组合成一个大数据块（大小为 _sending->bound）发送出去
+			*/
             do
             {
                 SessionBlock *sb = _sendque.front();
@@ -616,6 +638,10 @@ void TcpSession::onSend(zsummer::network::NetErrorCode ec, int sent)
     }
 }
 
+/*
+连接中和连接完成的心跳。
+连接中的心跳逻辑中，如果两次心跳之间还未连接成功，则触发重连。
+*/
 void TcpSession::onPulse()
 {
     if (_status == 3)
@@ -674,7 +700,9 @@ void TcpSession::onPulse()
 
 
 
-
+/*
+根据索引获取元祖引用
+*/
 TupleParam & TcpSession::autoTupleParamImpl(size_t index)
 {
     if (index > 100)
@@ -688,6 +716,9 @@ TupleParam & TcpSession::autoTupleParamImpl(size_t index)
     return _param[index];
 }
 
+/*
+根据索引获取只读元祖
+*/
 const TupleParam & TcpSession::peekTupleParamImpl(size_t index) const
 {
     const static TupleParam _invalid = std::make_tuple( false, 0.0, 0, "" );

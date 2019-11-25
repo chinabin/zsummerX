@@ -49,31 +49,44 @@ namespace zsummer
             TcpAccept();
             ~TcpAccept();
             bool initialize(EventLoopPtr& summer);
+			/*
+			设置服务器监听套接字并绑定完成端口
+			*/
             bool openAccept(const std::string ip, unsigned short port, bool reuse = true);
+			/*
+			投递监听请求到 IOCP。
+			传入 TcpSocketPtr 接管客户端接入后的 IO 操作，以及 handler 作为客户端接入成功后的回调。
+			设置对应的重叠结构(_handle)数据。
+			*/
             bool doAccept(const TcpSocketPtr& s, _OnAcceptHandler &&handler);
+			/*
+			处理 IOCP 关于客户端接入消息。
+				保存接入的客户端 ip 、端口、套接字、是否是 ipv6 信息。
+				调用 doAccept 中设置的回调接口。
+			*/
             bool onIOCPMessage(BOOL bSuccess);
             bool close();
         private:
             std::string logSection();
         private:
             //config
-            EventLoopPtr _summer;
+            EventLoopPtr _summer;		// 将客户端接入消息交给 IOCP 处理
 
 
             std::string        _ip;
             unsigned short    _port = 0;
 
             //listen
-            SOCKET            _server = INVALID_SOCKET;
+            SOCKET            _server = INVALID_SOCKET;		// 监听 Socket
             bool              _isIPV6 = false;
 
             //client
             SOCKET _socket = INVALID_SOCKET;
-            char _recvBuf[200];
+            char _recvBuf[200];			// 客户端接入的时候保存远端和本地地址信息，让 GetAcceptExSockaddrs 解析
             DWORD _recvLen = 0;
-            ExtendHandle _handle;
+            ExtendHandle _handle;		// 重叠结构，在 GetQueuedCompletionStatus 处理客户端接入的时候会得到
             _OnAcceptHandler _onAcceptHandler;
-            TcpSocketPtr _client;
+            TcpSocketPtr _client;		// 客户端接入之后 IO 操作被 TcpScoket 接管
 
         };
         using TcpAcceptPtr = std::shared_ptr<TcpAccept>;

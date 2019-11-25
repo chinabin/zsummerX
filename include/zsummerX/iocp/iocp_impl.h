@@ -53,6 +53,9 @@ namespace zsummer
             EventLoop(){_io = NULL;}
             ~EventLoop(){}
 
+			/*
+			创建完成端口
+			*/
             bool initialize();
             void runOnce(bool isImmediately = false);
             inline unsigned long long createTimer(unsigned int delayms, _OnTimerHandler &&handle, bool useSystemTime = true)

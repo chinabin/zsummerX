@@ -83,6 +83,9 @@ bool TcpAccept::initialize(EventLoopPtr& summer)
     return true;
 }
 
+/*
+设置服务器监听套接字并绑定完成端口
+*/
 bool TcpAccept::openAccept(const std::string ip, unsigned short port , bool reuse )
 {
     if (!_summer)
@@ -174,7 +177,7 @@ bool TcpAccept::openAccept(const std::string ip, unsigned short port , bool reus
 
 		WSAIoctl(
 			_server,
-			SIO_LOOPBACK_FAST_PATH_A,
+			SIO_LOOPBACK_FAST_PATH_A,		// 提升本地回环网络性能 https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/jj841212(v=vs.85)?redirectedfrom=MSDN
 			&OptionValue,
 			sizeof(OptionValue),
 			NULL,
@@ -213,8 +216,15 @@ bool TcpAccept::close()
     return true;
 }
 
+/*
+投递监听请求到 IOCP。
+传入 TcpSocketPtr 接管客户端接入后的 IO 操作，以及 handler 作为客户端接入成功后的回调。
+设置对应的重叠结构(_handle)数据。
+*/
 bool TcpAccept::doAccept(const TcpSocketPtr & s, _OnAcceptHandler&& handler)
 {
+	// 为什么：这个函数每次调用都会做好客户端接入的准备，怎么知道第二次准备的调用时机？
+	// 虽然 onIOCPMessage 函数会对 _onAcceptHandler 调用 move ，但是外界咋知道我能调用 doAccept 了，不会因为下面这个 if 而失败。
     if (_onAcceptHandler)
     {
         LCF("duplicate operation error." << logSection());
@@ -247,6 +257,20 @@ bool TcpAccept::doAccept(const TcpSocketPtr & s, _OnAcceptHandler&& handler)
         return false;
     }
     setNoDelay(_socket);
+	/*
+	投递异步连接请求：
+	函数：AcceptEx
+	参数：
+	一参本地监听Socket
+	二参为即将到来的客人准备好的Socket
+	三参接收缓冲区：
+		一存客人发来的第一份数据、二存Server本地地址、三存Client远端地址。地址包括IP和端口。
+	四参定三参数据区长度，0表只连不接收数据（但是上面说的本地和远端地址还是会有）
+	五参定三参本地地址区长度，至少sizeof(sockaddr_in) + 16
+	六参定三参远端地址区长度，至少sizeof(sockaddr_in) + 16
+	七参表示接收到的数据长度
+	八参不用管
+	*/
     if (!AcceptEx(_server, _socket, _recvBuf, 0, addrLen, addrLen, &_recvLen, &_handle._overlapped))
     {
         if (WSAGetLastError() != ERROR_IO_PENDING)
@@ -261,13 +285,19 @@ bool TcpAccept::doAccept(const TcpSocketPtr & s, _OnAcceptHandler&& handler)
     _handle._tcpAccept = shared_from_this();
     return true;
 }
+
+/*
+处理 IOCP 关于客户端接入消息。
+	保存接入的客户端 ip 、端口、套接字、是否是 ipv6 信息。
+	调用 doAccept 中设置的回调接口。
+*/
 bool TcpAccept::onIOCPMessage(BOOL bSuccess)
 {
-    std::shared_ptr<TcpAccept> guard( std::move(_handle._tcpAccept));
+    std::shared_ptr<TcpAccept> guard( std::move(_handle._tcpAccept));		// 为什么？
     _OnAcceptHandler onAccept(std::move(_onAcceptHandler));
     if (bSuccess)
     {
-
+		// 继承 _server 的属性。调用 AcceptEx 成功接入客户端之后规定必须这样。
         if (setsockopt(_socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&_server, sizeof(_server)) != 0)
         {
             LCW("setsockopt SO_UPDATE_ACCEPT_CONTEXT fail!  last error=" << WSAGetLastError() );
@@ -286,10 +316,18 @@ bool TcpAccept::onIOCPMessage(BOOL bSuccess)
         }
         else
         {
+			// 获取接入的客户端信息并保存，最后调用回调函数
             sockaddr * paddr1 = NULL;
             sockaddr * paddr2 = NULL;
             int tmp1 = 0;
             int tmp2 = 0;
+			/*
+			用来解析 AcceptEx 接收到的地址数据
+			一和二参都是拿 AcceptEx 参数
+			三和四参是规定这么大
+			五和六参表示本地地址及其长度
+			七和八参表示远端地址及其长度
+			*/
             GetAcceptExSockaddrs(_recvBuf, _recvLen, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &paddr1, &tmp1, &paddr2, &tmp2);
             _client->attachSocket(_socket, inet_ntoa(((sockaddr_in*)paddr2)->sin_addr), ntohs(((sockaddr_in*)paddr2)->sin_port), _isIPV6);
             onAccept(NEC_SUCCESS, _client);

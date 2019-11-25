@@ -103,9 +103,9 @@ namespace zsummer
             zsummer::network::TimerID _pulseTimerID = zsummer::network::InvalidTimerID;
 
             //! 
-            SessionBlock* _recving = nullptr;
-            SessionBlock* _sending = nullptr;
-            unsigned int _sendingLen = 0;
+            SessionBlock* _recving = nullptr;	// 当前数据接收块
+            SessionBlock* _sending = nullptr;	// 当前数据发送块
+            unsigned int _sendingLen = 0;		// 当前数据已发送的数据长度，如果发送完成则清零
 
             //! send data queue
             std::deque<SessionBlock *> _sendque;

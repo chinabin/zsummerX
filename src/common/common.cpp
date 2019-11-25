@@ -88,7 +88,7 @@ std::string zsummer::network::getHostByName(const std::string & name)
     struct addrinfo *res = nullptr;
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_UNSPEC;			// https://stackoverflow.com/questions/8149601/what-would-be-the-disadvantages-risks-of-using-af-unspec
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
     if (getaddrinfo(name.c_str(), "3306", &hints, &res) == 0)

@@ -133,8 +133,8 @@ namespace zsummer
             inline unsigned int getClosedSocketCount(){ return _totalClosedCTcpSocketObjs; }
             inline LoggerId getNetCoreLogger(){ return _netLoggerID; }
         private:
-            std::atomic_uint _totalCreatedCTcpSocketObjs;
-            std::atomic_uint _totalClosedCTcpSocketObjs;
+            std::atomic_uint _totalCreatedCTcpSocketObjs;		// 统计套接字的创建次数
+            std::atomic_uint _totalClosedCTcpSocketObjs;		// 统计套接字的关闭次数
             LoggerId _netLoggerID = 0;
         };
 
